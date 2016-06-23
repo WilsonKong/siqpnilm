@@ -4,6 +4,7 @@
 #
 
 import pandas as pd
+import os
 from libDataLoaders import dataset_loader
 import collections
 import nilm
@@ -16,7 +17,7 @@ np.set_printoptions(linewidth=100)
 
 model_args = pd.read_csv('model_building_args.csv', header=None)
 
-n_appliance = 5
+n_appliance = 5  # from 1 - 19
 args = model_args.loc[n_appliance - 1, :]
 
 modeldb = args[0]
@@ -42,7 +43,8 @@ centers = hmm.iterative_kmeans()
 # data.iloc[0:1440, 1:n_appliance+1].sum(1).plot()
 
 # defining problem
-length = 1440 * 7  # 1 minute interval, 7 days
+days = 36  # as the same length in SparseNILM demo
+length = 1440 * days  # 1 minute interval, 7 days
 aggregate = data.WHE.head(length)
 hmms = collections.OrderedDict()
 app_ids = list(data)[1:-1]
@@ -55,3 +57,5 @@ solver = nilm.SIQP(aggregate, hmms=hmms, step_thr=2)
 solver.solve()
 ground_truth = data[app_ids].head(length)
 evaluator = Evaluator(ground_truth, solver.estimate, solver.aggregate)
+print evaluator.report
+evaluator.report.to_csv(os.path.join('data', 'AMPdsR1_report_%i_appliances_for_%i_days.csv' % (n_appliance, days)))

@@ -6,6 +6,8 @@
 import pandas as pd
 import numpy as np
 import collections
+import copy
+import time
 from gurobipy import *
 
 
@@ -35,7 +37,7 @@ class SIQP(object):
         self.estimate = pd.DataFrame(columns=range(self.n_appliances))
 
     def solve(self):
-
+        tic = time.time()
         T = len(self.aggregate)
         print('Prepare to solve NILM, problem size is %s' % T)
         if T > self.max_problem_size:
@@ -48,7 +50,6 @@ class SIQP(object):
 
         # solve segment by segment
         for s in range(len(segments)):
-            print('Performing SIQP, solving segment No. %s' % s)
             level = segments[s].mean()
             dur = len(segments[s])
 
@@ -84,6 +85,14 @@ class SIQP(object):
                 self.result.loc[idx, :] = result.T
                 self.estimate.loc[idx, :] = estimate.T
 
+            toc = time.time() - tic
+            length = float(len(segments))
+            print(
+                'Performing SIQP, segment sovled: No. %s out of total %s, ETA: %.2f seconds' %
+                (s, length, toc / ((s+1) / length) - toc)
+            )
+
+        self.sol_time = time.time() - tic
         return
 
     def segment_aggregate(self):
@@ -125,15 +134,18 @@ class SIQP(object):
         for key, hmm in self.HMMs.iteritems():
             mus = hmm.obs_distns['mu'].values.astype(float).reshape((1, hmm.K))
             trans_mat = hmm.trans_mat
-            self_trans = np.diag(trans_mat).reshape((1, hmm.K))
+            self_trans = copy.copy(np.diag(trans_mat).reshape((1, hmm.K)))
             agg_mu += np.dot(mus, x_list[n])[0, 0]  # should return the Expr object instead of ndarray
-            obj += np.dot(np.log(np.power(self_trans, seg_dur)), x_list[n])[0, 0]
+            coef1 = np.log(np.power(self_trans, seg_dur))
+            coef1[~np.isfinite(coef1)] = - 1e50  # prevent error, set to a very small value
+            obj += np.dot(coef1, x_list[n])[0, 0]
             n += 1
 
         # TODO: try to develop dynamic sigma, so that level is low, sigma is lower
         obj += lognormpdf(level, agg_mu, 2)  # set a reasonable overall sigma
 
         model.setObjective(obj, GRB.MAXIMIZE)
+        model.setParam('OutputFlag', False)
         model.optimize()
 
         # populate optimisation result
@@ -179,15 +191,20 @@ class SIQP(object):
         for key, hmm in self.HMMs.iteritems():
             mus = hmm.obs_distns['mu'].values.astype(float).reshape((1, hmm.K))
             trans_mat = hmm.trans_mat
-            self_trans = np.diag(trans_mat).reshape((1, hmm.K))
+            self_trans = copy.copy(np.diag(trans_mat).reshape((1, hmm.K)))
             agg_mu += np.dot(mus, x_list[n])[0, 0]  # should return the Expr object instead of ndarray
-            obj += np.dot(np.log(np.power(self_trans, seg_dur)), x_list[n])[0, 0]
-            trans = trans_mat[last_result[n], :]
-            obj += np.dot(np.log(trans), x_list[n])[0, 0]
+            coef1 = np.log(np.power(self_trans, seg_dur))
+            coef1[~np.isfinite(coef1)] = - 1e50  # prevent error, set to a very small value
+            obj += np.dot(coef1, x_list[n])[0, 0]
+            trans = copy.copy(trans_mat[last_result[n], :])
+            coef2 = np.log(trans)
+            coef2[~np.isfinite(coef2)] = - 1e50  # prevent error, set to a very small value
+            obj += np.dot(coef2, x_list[n])[0, 0]
             n += 1
         obj += lognormpdf(level, agg_mu, 2)  # set a reasonable overall sigma
 
         model.setObjective(obj, GRB.MAXIMIZE)
+        model.setParam('OutputFlag', False)
         model.optimize()
 
         # populate optimisation result
