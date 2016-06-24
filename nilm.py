@@ -33,8 +33,8 @@ class SIQP(object):
         self.step_thr = step_thr
 
         self.n_appliances = len(hmms)
-        self.result = pd.DataFrame(columns=range(self.n_appliances))  # init a DataFrame for result
-        self.estimate = pd.DataFrame(columns=range(self.n_appliances))
+        self.result = pd.DataFrame(index=self.aggregate.index, columns=range(self.n_appliances))  # init a DataFrame
+        self.estimate = pd.DataFrame(index=self.aggregate.index, columns=range(self.n_appliances))
 
     def solve(self):
         tic = time.time()
@@ -49,13 +49,17 @@ class SIQP(object):
         estimate_list = list()
 
         # solve segment by segment
+        # dur = np.zeros(self.n_appliances)  # record the current state duration for each appliance
+        # last_result = np.zeros((self.n_appliances, 1))  # init last_result, all appliances OFF
         for s in range(len(segments)):
             level = segments[s].mean()
+            # dur += len(segments[s])
             dur = len(segments[s])
 
             # probability of all appliance states for lasting
             probs = list()
 
+            n = 0
             for key, hmm in self.HMMs.iteritems():
                 trans_mat = hmm.trans_mat
                 state_dim = hmm.K
@@ -65,17 +69,20 @@ class SIQP(object):
                         prob[k] = 1  # Assuming an appliance can stay at OFF (the state=0) for arbitrarily long
                     else:
                         prob[k] = np.power(trans_mat[k, k], dur)
+                n += 1
                 probs.append(prob)
 
             # build integer programming model via Gurobi interface
             if s == 0:
                 result, cal_level = self.solve_first_segment(level, dur)
+                # dur[result.flatten() != last_result.flatten()] = 0
                 segment_result.append(result)
                 estimate = np.array([hmm.obs_distns['mu'][result[n, 0]] for n, hmm in enumerate(self.HMMs.values())])
                 estimate_list.append(estimate)
             else:
                 last_result = segment_result[s - 1]
                 result, cal_level = self.solver_subsequent_segment(level, dur, last_result)
+                # dur[result.flatten() != last_result.flatten()] = 0
                 segment_result.append(result)
                 estimate = np.array([hmm.obs_distns['mu'][result[n, 0]] for n, hmm in enumerate(self.HMMs.values())])
                 estimate_list.append(estimate)
@@ -141,7 +148,6 @@ class SIQP(object):
             obj += np.dot(coef1, x_list[n])[0, 0]
             n += 1
 
-        # TODO: try to develop dynamic sigma, so that level is low, sigma is lower
         obj += lognormpdf(level, agg_mu, 2)  # set a reasonable overall sigma
 
         model.setObjective(obj, GRB.MAXIMIZE)
@@ -202,6 +208,9 @@ class SIQP(object):
             obj += np.dot(coef2, x_list[n])[0, 0]
             n += 1
         obj += lognormpdf(level, agg_mu, 2)  # set a reasonable overall sigma
+
+        # one at a time constraint
+
 
         model.setObjective(obj, GRB.MAXIMIZE)
         model.setParam('OutputFlag', False)

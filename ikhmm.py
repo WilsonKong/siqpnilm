@@ -116,6 +116,11 @@ class IterativeKmeansHMM:
                 perc[i] = float(len(self.ob[labels == i])) / self.T
                 if stds[i] == 0:
                     stds[i] = 0.01
+
+            if any(perc == 1):
+                stds = stds[perc == 1]
+                centers = centers[perc == 1]
+                perc = perc[perc == 1]
             std_list.append(stds)
             perc_list.append(perc)
             center_list.append(centers)

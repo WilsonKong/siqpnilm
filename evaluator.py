@@ -5,6 +5,8 @@
 
 import pandas as pd
 import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.patches import Rectangle
 from math import sqrt
 
 
@@ -16,6 +18,7 @@ class Evaluator:
     estimate = pd.DataFrame()          # estimate of appliance loads
     aggregate = pd.DataFrame()         # whole house load sequence
     timestamps = None
+    standby = 0.0                      # the standby power/current, below that considered OFF
 
     count_tp = None
     count_tn = None
@@ -34,7 +37,7 @@ class Evaluator:
     report = None
 
 
-    def __init__(self, ground_truth, estimate, aggregate):
+    def __init__(self, ground_truth, estimate, aggregate, standby=1.0):
         self.ground_truth = ground_truth
         self.estimate = estimate
         self.estimate.columns = self.ground_truth.columns
@@ -43,6 +46,7 @@ class Evaluator:
         self.timestamps = ground_truth.index
         self.T = len(self.timestamps)
         self.report = pd.DataFrame(columns=self.ground_truth.columns.tolist() + ['OVERALL'])
+        self.standby = standby
         self.update()
 
     def update(self, standby=1.0):
@@ -124,6 +128,24 @@ class Evaluator:
             quotient(self.report.loc['TP'], (self.report.loc['TP'] + self.report.loc['FN']))
         return self.report.loc[func_name]
 
+    def show(self):
+        fig = plt.figure()
+        ax1 = fig.add_subplot(211)
+        ax2 = fig.add_subplot(212)
+        ax1.set_title('Ground Truth')
+        ax2.set_title('NILM Estimate')
+        y1 = np.row_stack(self.ground_truth.values.T)
+        y2 = np.row_stack(self.estimate.values.T.astype(float))
+        x = self.aggregate.index
+        stack1 = ax1.stackplot(x, y1, linewidth=0)
+        stack2 = ax2.stackplot(x, y2, linewidth=0)
+        proxy_rects1 = [Rectangle((0, 0), 1, 1, fc=pc.get_facecolor()[0]) for pc in stack1]
+        proxy_rects2 = [Rectangle((0, 0), 1, 1, fc=pc.get_facecolor()[0]) for pc in stack2]
+        labels = list(self.ground_truth)
+        ax1.legend(proxy_rects1, labels)
+        ax2.legend(proxy_rects2, labels)
+        plt.show()
+        return
 
 
 

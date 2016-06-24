@@ -17,7 +17,7 @@ np.set_printoptions(linewidth=100)
 
 model_args = pd.read_csv('model_building_args.csv', header=None)
 
-n_appliance = 5  # from 1 - 19
+n_appliance = 11  # from 1 - 19
 args = model_args.loc[n_appliance - 1, :]
 
 modeldb = args[0]
@@ -43,19 +43,20 @@ centers = hmm.iterative_kmeans()
 # data.iloc[0:1440, 1:n_appliance+1].sum(1).plot()
 
 # defining problem
-days = 36  # as the same length in SparseNILM demo
+days = 7  # as the same length in SparseNILM demo
 length = 1440 * days  # 1 minute interval, 7 days
-aggregate = data.WHE.head(length)
+aggregate = data.WHE.tail(length)
 hmms = collections.OrderedDict()
 app_ids = list(data)[1:-1]
 for app_id in app_ids:
-    hmm = IterativeKmeansHMM(data[app_id].head(length), max_k=10, std_thres=1)
+    hmm = IterativeKmeansHMM(data[app_id].head(length), max_k=4, std_thres=1)
     hmm.fit()
     hmms[app_id] = hmm
 
 solver = nilm.SIQP(aggregate, hmms=hmms, step_thr=2)
 solver.solve()
-ground_truth = data[app_ids].head(length)
+ground_truth = data[app_ids].tail(length)
 evaluator = Evaluator(ground_truth, solver.estimate, solver.aggregate)
 print evaluator.report
 evaluator.report.to_csv(os.path.join('data', 'AMPdsR1_report_%i_appliances_for_%i_days.csv' % (n_appliance, days)))
+evaluator.show()
