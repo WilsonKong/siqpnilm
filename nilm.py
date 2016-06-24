@@ -175,6 +175,7 @@ class SIQP(object):
         model = Model('siqp')
 
         x_list = list()
+        last_x_list = list()
         constraint_list = list()
         # adding variables
         n = 0
@@ -184,6 +185,8 @@ class SIQP(object):
             x = np.array([model.addVar(vtype=GRB.BINARY, name='x_%s_%s' % (n, k)) for k in range(hmm.K)])
             x = x.reshape((hmm.K, 1))
             x_list.append(x)
+            last_x = np.zeros((hmm.K, 1))  # init var for holding previous state
+            last_x_list.append(last_x)
 
             # integrate new variables
             model.update()
@@ -193,6 +196,7 @@ class SIQP(object):
         obj = 0
         agg_mu = 0
         model.update()
+        change = 0
         n = 0
         for key, hmm in self.HMMs.iteritems():
             mus = hmm.obs_distns['mu'].values.astype(float).reshape((1, hmm.K))
@@ -203,6 +207,9 @@ class SIQP(object):
             coef1[~np.isfinite(coef1)] = - 1e50  # prevent error, set to a very small value
             obj += np.dot(coef1, x_list[n])[0, 0]
             trans = copy.copy(trans_mat[last_result[n], :])
+            last_x = last_x_list[n]
+            last_x[last_result[n], 0] = 1
+            change += 1.0/2.0 * np.dot((last_x - x_list[n]).T, (last_x - x_list[n]))[0, 0]
             coef2 = np.log(trans)
             coef2[~np.isfinite(coef2)] = - 1e50  # prevent error, set to a very small value
             obj += np.dot(coef2, x_list[n])[0, 0]
@@ -210,7 +217,8 @@ class SIQP(object):
         obj += lognormpdf(level, agg_mu, 2)  # set a reasonable overall sigma
 
         # one at a time constraint
-
+        model.addConstr(change <= 1)
+        model.update()
 
         model.setObjective(obj, GRB.MAXIMIZE)
         model.setParam('OutputFlag', False)

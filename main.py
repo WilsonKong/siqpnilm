@@ -43,7 +43,7 @@ centers = hmm.iterative_kmeans()
 # data.iloc[0:1440, 1:n_appliance+1].sum(1).plot()
 
 # defining problem
-days = 7  # as the same length in SparseNILM demo
+days = 180  # as the same length in SparseNILM demo
 length = 1440 * days  # 1 minute interval, 7 days
 aggregate = data.WHE.tail(length)
 hmms = collections.OrderedDict()

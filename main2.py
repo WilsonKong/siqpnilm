@@ -18,7 +18,7 @@ train = DataSet(os.path.join('data', 'redd.h5'))
 test = DataSet(os.path.join('data', 'redd.h5'))
 # test.set_window(start='30-4-2011')
 
-buildings = [6]  # house 3 does not have electric stove
+buildings = [1, 2, 6]  # house 3 does not have electric stove
 apps = ['fridge', 'light', 'dish washer', 'washer dryer', 'electric stove']
 for building in buildings:
     index_train = train.buildings[building].elec['fridge'].load().next().resample('1min', np.median).index
@@ -49,6 +49,6 @@ for building in buildings:
     ground_truth = data_test[apps]
     evaluator = Evaluator(ground_truth, solver.estimate, solver.aggregate, standby=10)
     print evaluator.report
-    evaluator.report.to_csv(os.path.join('data', 'REDD_report_house_%i.csv' % (building)))
+    evaluator.report.to_csv(os.path.join('data', 'REDD_report_house_%i_one_step_at_a_time.csv' % (building)))
 
 
