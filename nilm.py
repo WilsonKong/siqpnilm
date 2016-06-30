@@ -217,7 +217,7 @@ class SIQP(object):
         obj += lognormpdf(level, agg_mu, 2)  # set a reasonable overall sigma
 
         # one at a time constraint
-        model.addConstr(change <= 1)
+        model.addConstr(change <= 2)
         model.update()
 
         model.setObjective(obj, GRB.MAXIMIZE)
