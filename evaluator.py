@@ -145,12 +145,13 @@ class Evaluator:
         labels = list(self.ground_truth)
         ax1.legend(proxy_rects1, labels)
         ax2.legend(proxy_rects2, labels)
+        plt.rc('font', **font)
         plt.tight_layout()
         if savefilename is None:
             plt.show()
         else:
             plt.savefig(savefilename)
-        plt.close(fig)
+            plt.close(fig)
         return
 
 

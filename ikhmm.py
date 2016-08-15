@@ -7,6 +7,9 @@ import numpy as np
 import pandas as pd
 import copy
 from sklearn.cluster import KMeans
+from matplotlib import pyplot as plt
+from matplotlib.patches import Rectangle
+
 
 class IterativeKmeansHMM:
 
@@ -181,6 +184,46 @@ class IterativeKmeansHMM:
         self.K = len(centers)
 
         return centers
+
+    def plot_fitting_result(self, savefilepath=None):
+        """
+        This function should only be called after the model is fit
+        :param savefilepath:
+        :return:
+        """
+        fig = plt.figure(figsize=(16, 10))
+        font = {'size': 14}
+        ax = fig.add_subplot(111)
+        y_off = []
+        y_on = []
+        for t in range(len(self.states)):
+            state = self.states[t]
+            if state == 0:
+                y_off.append(self.obs_distns.loc[state, 'mu'])
+                y_on.append(np.NaN)
+            else:
+                y_off.append(np.NaN)
+                y_on.append(self.obs_distns.loc[state, 'mu'])
+        y_off = np.array(y_off)
+        y_on = np.array(y_on)
+        colors = ['b', 'r', 'g']
+        proxy_rects = [Rectangle((0, 0), 1, 1, fc=c) for c in colors]
+        labels = ['original', 'OFF state', 'ON state']
+        ax.legend(proxy_rects, labels)
+        plt.plot(self.ob, c='b')
+        plt.plot(y_off, c='r', linewidth=2.0)
+        plt.plot(y_on, c='g', linewidth=2.0)
+        plt.ylabel('Power [W]', fontsize=14)
+        plt.xlabel('Time steps', fontsize=14)
+        plt.rc('font', **font)
+        plt.tight_layout()
+        if savefilepath is None:
+            plt.show()
+        else:
+            plt.savefig(savefilepath)
+            plt.close(fig)
+        return
+
 
 def fit_weighted_gaussian(x, w=None):
     if w is None:
