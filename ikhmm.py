@@ -26,6 +26,7 @@ class IterativeKmeansHMM:
         self.max_K = max_k
         self.std_thres = std_thres
         self.T = len(ob)
+        self.num_states = -1
 
     def fit(self):
         centers = self.iterative_kmeans()
@@ -57,6 +58,8 @@ class IterativeKmeansHMM:
             init_prob[k] = (self.states == k).sum() / float(self.T)
         self.init_prob = init_prob
 
+        self.num_states = len(np.unique(self.states))
+
         print('init_prob: \n%s\n' % self.init_prob)
         print('trans_mat: \n%s\n' % self.trans_mat)
         print('obs_distns: \n%s\n' % self.obs_distns)
@@ -74,7 +77,7 @@ class IterativeKmeansHMM:
         center_list = list()
         label_list = list()
 
-        for n_clusters in range(2, self.max_K + 1):
+        for n_clusters in range(1, self.max_K + 1):
 
             # evenly initialise starting points for iterative kmeans
             init = np.zeros((n_clusters,))
@@ -97,7 +100,10 @@ class IterativeKmeansHMM:
 
             # perform k-means with the starting points
             kmeans = KMeans(n_clusters=n_clusters, n_init=1, init=init.reshape(n_clusters, 1))
-            kmeans.fit(self.ob.values.reshape(self.T, 1))
+            if type(self.ob) == np.ndarray:
+                kmeans.fit(self.ob.reshape(self.T, 1))
+            else:
+                kmeans.fit(self.ob.values.reshape(self.T, 1))
             labels = kmeans.labels_
             centers = kmeans.cluster_centers_
 

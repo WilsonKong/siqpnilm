@@ -128,8 +128,9 @@ class Evaluator:
             quotient(self.report.loc['TP'], (self.report.loc['TP'] + self.report.loc['FN']))
         return self.report.loc[func_name]
 
-    def show(self):
-        fig = plt.figure()
+    def show(self, savefilename=None):
+        fig = plt.figure(figsize=(16, 10))
+        font = {'size': 14}
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
         ax1.set_title('Ground Truth')
@@ -144,7 +145,12 @@ class Evaluator:
         labels = list(self.ground_truth)
         ax1.legend(proxy_rects1, labels)
         ax2.legend(proxy_rects2, labels)
-        plt.show()
+        plt.tight_layout()
+        if savefilename is None:
+            plt.show()
+        else:
+            plt.savefig(savefilename)
+        plt.close(fig)
         return
 
 

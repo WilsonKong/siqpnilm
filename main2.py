@@ -1,5 +1,5 @@
 # 
-# DESCRIPTION
+# The script for REDD simulation in the TSG paper R1
 # Copyright (C) Weicong Kong 2016. All Right Reserved
 #
 
