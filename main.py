@@ -10,7 +10,6 @@ import collections
 import nilm
 from ikhmm import *
 from evaluator import *
-from hmmlearn import hmm
 
 pd.set_option('display.width', 200)
 np.set_printoptions(linewidth=100)
