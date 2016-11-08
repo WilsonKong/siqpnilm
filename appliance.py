@@ -1,7 +1,0 @@
-
-
-
-class Appliance:
-
-    type = ''
-
